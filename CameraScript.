@@ -2,6 +2,7 @@
 //Create an object you want the camera to follow. Attach this script to it
 //Child a "zpivot" slightly above this game object
 //Child both the camera and an empty "preffered location" object to this zpivot
+//rotate the zpivot 45 degrees X and the camera 90 degrees X, have the zpivot start ~0.5 units above the target, and 
 
 using UnityEngine;
 using UnityEngine.UI;
