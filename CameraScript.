@@ -1,0 +1,122 @@
+//To use this script: 
+//Create an object you want the camera to follow. Attach this script to it
+//Child a "zpivot" slightly above this game object
+//Child both the camera and an empty "preffered location" object to this zpivot
+
+using UnityEngine;
+using UnityEngine.UI;
+
+public class CameraController : MonoBehaviour {
+
+    public bool autocam;
+    public float rotationSpeed; //2 is good
+    public GameObject cam;
+    public GameObject preferedSpotObject;
+    public GameObject zPivot;
+
+    public int invertCamera = -1;
+
+    private float zAngle = 45;
+    private float zMin = -90;
+    private float zMax = 90;
+    private float zMod = 2;
+
+    float maxScroll = 20;
+    float minScroll = 0.1f;
+
+    Vector3 transformToSet;
+    Vector3 preferedTransform = new Vector3 (0, 8, 0);
+    RaycastHit obstaclePoint;
+
+	void LateUpdate () {
+
+        //Right mouse button to move camera. Automatic camera movement if autocam is on and the game is not paused using timescale = 0
+        if ((Input.GetMouseButton(1) && !autocam) || (autocam && Time.timeScale != 0 && !Input.GetMouseButtonDown(1)))
+        {
+            //Locks the cursur in center screen and invisibles it when adjusting camera.
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+ 
+            //Rotates right based on mouse distance moved and rotationspeed
+            if (Input.GetAxis("Mouse X") > 0)
+            {
+                transform.Rotate(Vector3.up * Input.GetAxis("Mouse X") * rotationSpeed);
+            }
+            else if (Input.GetAxis("Mouse X") < 0)
+            {
+                transform.Rotate(Vector3.down * -Input.GetAxis("Mouse X") * rotationSpeed);
+            }
+  
+            //Rotates vertical based on Mousey movement and rotationspeed
+            if (Input.GetAxis("Mouse Y") * invertCamera > 0 && zAngle < zMax) 
+            {
+                zPivot.transform.Rotate(Vector3.right * Input.GetAxis("Mouse Y") * rotationSpeed / zMod * invertCamera);
+                zAngle += Input.GetAxis("Mouse Y") * rotationSpeed / zMod * invertCamera;
+            }
+            else if (Input.GetAxis("Mouse Y") * invertCamera < 0 && zAngle > zMin)
+            {
+                zPivot.transform.Rotate(Vector3.left * -Input.GetAxis("Mouse Y") * rotationSpeed / zMod * invertCamera);
+                zAngle += Input.GetAxis("Mouse Y") * rotationSpeed / zMod * invertCamera;
+            }
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        transformToSet = cam.transform.position;
+
+        //Moves the prefered location of the camera further or closer based on mouse scroll wheel
+        float  camDistanceChange = Input.GetAxis("Mouse ScrollWheel");
+        if (camDistanceChange != 0) {
+
+            if (camDistanceChange > 0 && preferedTransform.y > minScroll)
+            {
+                preferedTransform = new Vector3(0, preferedTransform.y - camDistanceChange * rotationSpeed, 0);
+            }
+            else if (camDistanceChange < 0 && preferedTransform.y < maxScroll)
+            {
+                preferedTransform = new Vector3(0, preferedTransform.y - camDistanceChange * rotationSpeed, 0);
+            }
+        }
+
+        preferedSpotObject.transform.localPosition = preferedTransform;
+
+        //If a raycast from the ninjas head to the preffered camera place hits an obstacle, move the camera closer, otherwise move it TOWARDS its preffered position.
+        if (Physics.Raycast(zPivot.transform.position, new Vector3(preferedSpotObject.transform.position.x - zPivot.transform.position.x, preferedSpotObject.transform.position.y - zPivot.transform.position.y, preferedSpotObject.transform.position.z - zPivot.transform.position.z), out obstaclePoint, preferedTransform.y + 0.5f))
+        {
+            transformToSet = new Vector3(0, obstaclePoint.distance - 2f, 0);
+
+            //We add .5 to make sure we arent clipping with the thing we move in front of. We need to offest this at low values.
+            if (transformToSet.y < .6f && transformToSet.y > .1f)
+            {
+                transformToSet = new Vector3(0, transformToSet.y + (.6f - transformToSet.y), 0);
+            }
+            else if(transformToSet.y <= .1f){
+                transformToSet = new Vector3(0, transformToSet.y + 0.5f, 0);
+            }
+            cam.transform.localPosition = transformToSet;
+        }
+        else{
+            cam.transform.localPosition = Vector3.MoveTowards(cam.transform.localPosition, preferedTransform, .6f);
+        }
+
+	}
+
+    public void setCameraRotateSpeed(float newSpeed)
+    {
+        rotationSpeed = 0.7f * (newSpeed + 1);
+    }
+
+    //Increase or decrease camera rotate speed by 1. If its out of bounds, undo this.
+    public void inCreaseCameraSpeed(int posNegOne)
+    {
+        rotationSpeed += posNegOne;
+
+        if (rotationSpeed < 2 || rotationSpeed > 10)
+        {
+            rotationSpeed -= posNegOne;
+        }
+    }
+}
